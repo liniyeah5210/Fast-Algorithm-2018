@@ -6,10 +6,10 @@
 
 int main()
 {
-	clock_t t1, t2;				// variables for computing clocks 
-	double *x, *b, *c, T1, T2;		
+	clock_t t1, t2;				 
+	double *x, *b, *c,T1, T2, T3;		
 	double **A;
-	int i, j, k, L, M, N=100;		
+	int i, j, k, L, M, N=1000;		
 		
 		A = (double **) malloc( N * sizeof(double *));  
 		A[0] = (double *) malloc(N*N*sizeof(double));
@@ -25,13 +25,12 @@ int main()
 		b = (double *) malloc( N * sizeof(double));
 		c = (double *) malloc( N * sizeof(double));
 		
-		//平行造出random的 A 矩陣 與 x 向量 
+		//Generate matrix parallelly 
 		M = N/4;
 		#pragma omp parallel num_threads(4) private(i,j,k,L)
 		{
 			k = omp_get_thread_num();
-			//printf("the seed at thread %d is : %d\n",k,time(NULL)>>k);
-			srand(time(NULL)>>k);			// 在每一個 thread 中設定起始值 
+			srand(time(NULL)>>k);			 
 			for(i=k*M;i<(k+1)*M;++i)
 			{
 				for(j=0;j<N;++j)
@@ -40,30 +39,10 @@ int main()
 				}
 				x[i] = rand();
 			}
-		}
-		
-/*
-		//將A矩陣印出來 
-		printf("A = \n");
-		for(i=0;i<N;++i)
-		{
-			for(j=0;j<N;++j)
-			{
-				printf("%d ",A[i][j]);
-			}
-			printf("\n");
-		}
-		
-		printf("============================================\n");
-		
-		//將x向量印出來 
-		printf("x = \n");
-		for(i=0;i<N;++i)
-		{
-			printf("%f \n",x[i]);
-		}
-*/		
-		// for correct answer
+		}	
+
+
+		//Compute matrix-vector multiplication without parallelization
 		double t;
 		t1 = clock();
 		for(i=0;i<N;++i) 
@@ -78,22 +57,11 @@ int main()
 		t2 = clock();
 		T1 = (t2-t1)/(double)CLOCKS_PER_SEC;
 
-/*		
-		printf("============================================\n");
 		
-		printf("for correct answer b = \n");
-		for(i=0;i<N;++i) 
-		{
-			printf("%f \n",b[i]);
-		}
-		
-		printf("============================================\n");
-*/
-		
-		// for parallel answer
+		//Compute matrix-vector multiplication with parallelization 
 		t1 = clock();
-		M = N/4;
-		#pragma omp parallel num_threads(4) private(i,j,k,t)
+		M = N/10;
+		#pragma omp parallel num_threads(10) private(i,j,k,t)
 		{
 			k = omp_get_thread_num();
 			for(i=k*M;i<(k+1)*M;++i) 
@@ -109,20 +77,15 @@ int main()
 		t2 = clock();
 		T2 = (t2-t1)/(double) CLOCKS_PER_SEC;
 
-/*		
-		printf("============================================\n");
+
 		
-		printf("for parallel answer b = \n");
-		for(i=0;i<N;++i) 
-		{
-			printf("%f \n",c[i]);
-		}
-*/
-			
+
+
+		//Compare the answers and print the time
 		for(i=0;i<N;++i)
 		{
 			if(fabs(b[i]-c[i])!=0)
-			printf("Wrong at i = %d, the fabs(b[i]-c[i]) = %f\n", i, fabs(b[i]-c[i]));
+			printf("Parallelization method 1: Wrong at i = %d, the fabs(b[i]-c[i]) = %f\n", i, fabs(b[i]-c[i]));
 		}
 		printf("Matrix time vector : %f\n",T1);
 		printf("Matrix time vector (parallel) : %f\n",T2);
